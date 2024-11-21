@@ -343,7 +343,7 @@ fun CategoryGridView(modifier: Modifier = Modifier,selectedIndex: MutableState<I
             ) {
                 Image(
                     painter = painterResource(id = item.img),
-                    contentDescription = "categoryTypeImage",
+                    contentDescription = "categoryTypeImage123",
                     modifier = Modifier
                         .height(40.dp)
                         .width(40.dp),
