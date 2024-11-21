@@ -333,7 +333,7 @@ fun CategoryGridView(modifier: Modifier = Modifier,selectedIndex: MutableState<I
                     )
                     .padding(3.dp)
                     .clickable {
-                        // Update the selected index only if not already selected
+                        // Update the selected index only if not already select
                         if (selectedIndex.value != index) {
                             selectedIndex.value = index
                         }
