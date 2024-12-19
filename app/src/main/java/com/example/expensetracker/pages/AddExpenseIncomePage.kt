@@ -1,11 +1,15 @@
 package com.example.expensetracker.pages
 
+import android.os.Build
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.rememberScrollableState
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,8 +28,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
@@ -70,26 +76,39 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.ExperimentalUnitApi
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.expensetracker.AuthState
 import com.example.expensetracker.AuthViewModel
 import com.example.expensetracker.R
 import com.example.expensetracker.data.CategoryGridModel
+import com.example.expensetracker.data.ExpenseDataModel
+import com.example.expensetracker.data.ExpenseViewModel
 import com.google.accompanist.pager.ExperimentalPagerApi
+import com.maxkeppeker.sheets.core.models.base.rememberSheetState
+import com.maxkeppeler.sheets.calendar.CalendarDialog
+import com.maxkeppeler.sheets.calendar.models.CalendarConfig
+import com.maxkeppeler.sheets.calendar.models.CalendarSelection
+import com.maxkeppeler.sheets.calendar.models.CalendarStyle
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlin.math.absoluteValue
 
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalPagerApi::class)
 @Composable
-fun AddExpenseIncomePage(modifier: Modifier=Modifier,navController: NavController,authViewModel: AuthViewModel){
+fun AddExpenseIncomePage(modifier: Modifier=Modifier,navController: NavController,authViewModel: AuthViewModel,expenseViewModel: ExpenseViewModel){
     val context = LocalContext.current
     val authState = authViewModel.authState.observeAsState()
     LaunchedEffect(authState.value) {
@@ -99,25 +118,62 @@ fun AddExpenseIncomePage(modifier: Modifier=Modifier,navController: NavControlle
         }
     }
 
-    AddExpenseIncomeView(modifier,navController)
+    AddExpenseIncomeView(modifier,navController,expenseViewModel)
 
 }
 
 
+@RequiresApi(Build.VERSION_CODES.O)
 @ExperimentalPagerApi
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddExpenseIncomeView(modifier: Modifier = Modifier, navController: NavController) {
+fun AddExpenseIncomeView(modifier: Modifier = Modifier, navController: NavController,expenseViewModel: ExpenseViewModel) {
     val pagerState = rememberPagerState(pageCount = { 2 })
     val tabs = listOf("EXPENSES", "INCOME")
     val coroutineScope = rememberCoroutineScope()
     var amount by remember { mutableStateOf("") }
-    var selectedIndex by remember { mutableStateOf(-1) }
+    var selectedIndex = remember { mutableStateOf(-1) }
     var selectedTabIndex by remember { mutableStateOf(0) }
     var isTextFieldFocused by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
+    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+    var comment by remember {
+        mutableStateOf("")
+    }
+
+    // CalendarDialog state
+    val calendarDialogState = rememberSheetState()
+
+    val disabledDates = generateSequence(LocalDate.now().plusDays(1)) { it.plusDays(1) }
+        .takeWhile { it.isBefore(LocalDate.now().plusMonths(1)) } // you can adjust the duration
+        .toList()
+    CalendarDialog(
+        state = calendarDialogState,
+        config = CalendarConfig(
+            monthSelection = true,
+            yearSelection = true,
+            style = CalendarStyle.MONTH,
+            disabledDates = disabledDates
+        ),
+        selection = CalendarSelection.Date { date ->
+            selectedDate = date
+        }
+    )
+
     val context = LocalContext.current
+    val courseList = listOf(
+        CategoryGridModel(R.drawable._pngtree_medical_health_logo_4135842, "Health", R.color.color_e64747),
+        CategoryGridModel(R.drawable.houselogo, "House", R.color.color_f5a662),
+        CategoryGridModel(R.drawable.foodlogo, "Food", R.color.color_cf9dca),
+        CategoryGridModel(R.drawable.educationlogo, "Education", R.color.color_5b92c2),
+        CategoryGridModel(R.drawable.giftlogo, "Gift", R.color.color_e677bf),
+        CategoryGridModel(R.drawable.grocerieslogo, "Groceries", R.color.color_4db36a),
+        CategoryGridModel(R.drawable.family1, "Family", R.color.color_ecf545),
+        CategoryGridModel(R.drawable.gym, "Workout", R.color.color_fab669),
+        CategoryGridModel(R.drawable.buslogo1, "Transport", R.color.color_2c8ae8),
+        CategoryGridModel(R.drawable.other, "Other", R.color.color_86888a)
+    )
 
     LaunchedEffect(pagerState.currentPage) {
         selectedTabIndex = pagerState.currentPage
@@ -140,6 +196,7 @@ fun AddExpenseIncomeView(modifier: Modifier = Modifier, navController: NavContro
             modifier = Modifier
                 .fillMaxSize()
                 .background(colorResource(id = R.color.color_515753))
+                .verticalScroll(rememberScrollState())
         ) {
             Box(
                 modifier = Modifier.background(
@@ -148,7 +205,7 @@ fun AddExpenseIncomeView(modifier: Modifier = Modifier, navController: NavContro
                 )
             ) {
                 Column {
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(8.dp))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -159,14 +216,14 @@ fun AddExpenseIncomeView(modifier: Modifier = Modifier, navController: NavContro
                             Icon(
                                 imageVector = Icons.Default.ArrowBack,
                                 contentDescription = "Back",
-                                tint = Color.White
+                                tint = colorResource(R.color.color_ffffff)
                             )
                         }
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
                             text = "Add Transaction",
                             fontSize = 20.sp,
-                            color = Color.White
+                            color = colorResource(R.color.color_ffffff)
                         )
                     }
 
@@ -183,20 +240,20 @@ fun AddExpenseIncomeView(modifier: Modifier = Modifier, navController: NavContro
                                     .padding(horizontal = 48.dp)
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(
-                                        color = Color.White,
+                                        color = colorResource(R.color.color_ffffff),
                                         shape = RoundedCornerShape(8.dp)
                                     )
                             )
                         },
-                        contentColor = Color.Transparent,
-                        divider = { HorizontalDivider(color = Color.Transparent) },
+                        contentColor = colorResource(R.color.color_transparent),
+                        divider = { HorizontalDivider(color = colorResource(R.color.color_transparent)) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(4.dp)
                     ) {
                         tabs.forEachIndexed { index, title ->
                             Tab(
-                                unselectedContentColor = Color.Transparent,
+                                unselectedContentColor = colorResource(R.color.color_transparent),
                                 selected = selectedTabIndex == index,
                                 onClick = {
                                     selectedTabIndex = index
@@ -209,15 +266,15 @@ fun AddExpenseIncomeView(modifier: Modifier = Modifier, navController: NavContro
                                     text = title,
                                     fontSize = 20.sp,
                                     fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal,
-                                    color = Color.White
+                                    color = colorResource(R.color.color_ffffff)
                                 )
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.height(50.dp))
+                    Spacer(modifier = Modifier.height(40.dp))
                 }
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(6.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -226,13 +283,17 @@ fun AddExpenseIncomeView(modifier: Modifier = Modifier, navController: NavContro
             ) {
                 OutlinedTextField(
                     value = amount,
-                    onValueChange = { amount = it },
-                    label = { Text("Amount", color = Color.White) },
+                    onValueChange = {
+                        if (it.all { char -> char.isDigit() } && it.length <= 9) {
+                            amount = it
+                        }
+                    },
+                    label = { Text("Amount", color = colorResource(R.color.color_ffffff)) },
                     maxLines = 1,
                     leadingIcon = {
                         Text(
                             text = "₹",
-                            color = Color.White,
+                            color = colorResource(R.color.color_ffffff),
                             textAlign = TextAlign.Center
                         )
                     },
@@ -241,55 +302,140 @@ fun AddExpenseIncomeView(modifier: Modifier = Modifier, navController: NavContro
                         .onFocusChanged { focusState ->
                             isTextFieldFocused = focusState.isFocused
                         }
-                        .background(Color.Transparent),
+                        .background(colorResource(R.color.color_transparent)),
                     colors = TextFieldDefaults.outlinedTextFieldColors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        containerColor = Color.Transparent,
-                        unfocusedLabelColor = Color.White,
-                        focusedLabelColor = Color.White,
-                        cursorColor = Color.White,
-                        focusedBorderColor = Color.White,
-                        unfocusedBorderColor = Color.White
+                        focusedTextColor = colorResource(R.color.color_ffffff),
+                        unfocusedTextColor = colorResource(R.color.color_ffffff),
+                        containerColor = colorResource(R.color.color_transparent),
+                        unfocusedLabelColor = colorResource(R.color.color_ffffff),
+                        focusedLabelColor = colorResource(R.color.color_ffffff),
+                        cursorColor = colorResource(R.color.color_ffffff),
+                        focusedBorderColor = colorResource(R.color.color_ffffff),
+                        unfocusedBorderColor = colorResource(R.color.color_ffffff)
                     ),
                     keyboardOptions = KeyboardOptions.Default.copy(
                         keyboardType = KeyboardType.Number
                     )
                 )
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
+
             Text("Category",
-                color = Color.White,
+                color = Color(0xFFD6AA09),
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
                 modifier = Modifier.padding(start = 28.dp)
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
+
             CategoryGridView(
                 modifier = Modifier
-                    .weight(1f)
-                    .padding(8.dp)
-                , selectedIndex = remember { mutableStateOf(selectedIndex) }
-            )
-            Spacer(Modifier.height(20.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Button(
-                    onClick = {  },
-                    enabled = amount.isNotEmpty() && selectedIndex != -1,
-                    modifier = Modifier
-                        .height(50.dp)
-                        .width(200.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        if (amount.isNotEmpty() && selectedIndex != -1) colorResource(R.color.color_515753) else colorResource(R.color.color_ccb45c)
-                    ),
-                ) {
-                    Text(text = "Add", color = Color.White, fontSize = 16.sp)
+                    .padding(8.dp),
+                courseList=courseList,
+                selectedIndex.value,
+                {index->
+                    selectedIndex.value = index
                 }
+            )
+            Spacer(Modifier.height(6.dp))
+
+            Text("Select Date",
+                color = Color(0xFFD6AA09),
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                modifier = Modifier
+                    .padding(start = 28.dp))
+
+            Spacer(Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.clickable {
+                    calendarDialogState.show()
+                }
+            ) {
+                Text(
+                    "${selectedDate}",
+                    color = colorResource(R.color.color_ffffff),
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 16.sp,
+                    textDecoration = TextDecoration.Underline,
+                    modifier = Modifier
+                        .padding(start = 28.dp)
+                )
+                Spacer(Modifier.width(20.dp))
+                Image(
+                    painter = painterResource(R.drawable.calender),
+                    contentDescription = "calenderImage",
+                    modifier = Modifier
+                        .height(20.dp)
+                        .width(20.dp),
+                    colorFilter = ColorFilter.tint(colorResource(R.color.color_ffffff))
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+            Text("Comment",
+                color = Color(0xFFD6AA09),
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                modifier = Modifier
+                    .padding(start = 28.dp))
+
+            Spacer(Modifier.height(10.dp))
+
+            OutlinedTextField(
+                value = comment,
+                onValueChange = { comment = it },
+                label = { Text("Comment", color = colorResource(R.color.color_ffffff)) },
+                maxLines = 2,
+                modifier = Modifier
+                    .padding(start = 28.dp, end = 20.dp)
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester)
+                    .onFocusChanged { focusState ->
+                        isTextFieldFocused = focusState.isFocused
+                    }
+                    .background(colorResource(R.color.color_transparent)),
+                colors = TextFieldDefaults.outlinedTextFieldColors(
+                    focusedTextColor = colorResource(R.color.color_ffffff),
+                    unfocusedTextColor = colorResource(R.color.color_ffffff),
+                    containerColor = colorResource(R.color.color_transparent),
+                    unfocusedLabelColor = colorResource(R.color.color_ffffff),
+                    focusedLabelColor = colorResource(R.color.color_ffffff),
+                    cursorColor = colorResource(R.color.color_ffffff),
+                    focusedBorderColor = colorResource(R.color.color_ffffff),
+                    unfocusedBorderColor = colorResource(R.color.color_ffffff)
+                ),
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    keyboardType = KeyboardType.Unspecified
+                )
+            )
+            Spacer(Modifier.height(12.dp))
+
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+                .align(Alignment.BottomEnd),
+
+            contentAlignment = Alignment.Center
+        ) {
+            Button(
+                onClick = {
+                    val type = if (selectedTabIndex == 0) "expense" else "income"
+                    expenseViewModel.insertExpense(ExpenseDataModel(type = type, category = courseList[selectedIndex.value].type, noteString = comment, color = courseList[selectedIndex.value].color, date = convertSelectedDateToMillisInIST(selectedDate), amount = amount.toInt(), img = courseList[selectedIndex.value].img))
+                    navController.navigate("home")
+                },
+                enabled = amount.isNotEmpty() && selectedIndex.value != -1,
+                modifier = Modifier
+                    .height(50.dp)
+                    .width(200.dp),
+                colors = ButtonDefaults.buttonColors(
+                    disabledContainerColor = colorResource(R.color.color_ccb45c).copy(alpha = .5f),
+                    containerColor =  colorResource(R.color.color_d6aa09).copy(alpha = .5f)
+                ),
+            ) {
+                Text(text = "Add", color = colorResource(R.color.color_ffffff), fontSize = 16.sp)
             }
         }
     }
@@ -297,46 +443,37 @@ fun AddExpenseIncomeView(modifier: Modifier = Modifier, navController: NavContro
 
 
 @Composable
-fun CategoryGridView(modifier: Modifier = Modifier,selectedIndex: MutableState<Int>) {
-    val courseList = listOf(
-        CategoryGridModel(R.drawable._pngtree_medical_health_logo_4135842, "Health", R.color.color_e64747),
-        CategoryGridModel(R.drawable.houselogo, "House", R.color.color_f5a662),
-        CategoryGridModel(R.drawable.foodlogo, "Food", R.color.color_cf9dca),
-        CategoryGridModel(R.drawable.educationlogo, "Education", R.color.color_5b92c2),
-        CategoryGridModel(R.drawable.giftlogo, "Gift", R.color.color_e677bf),
-        CategoryGridModel(R.drawable.grocerieslogo, "Groceries", R.color.color_4db36a),
-        CategoryGridModel(R.drawable.family1, "Family", R.color.color_ecf545),
-        CategoryGridModel(R.drawable.gym, "Workout", R.color.color_fab669),
-        CategoryGridModel(R.drawable.buslogo1, "Transport", R.color.color_2c8ae8),
-        CategoryGridModel(R.drawable.other, "Other", R.color.color_86888a)
-    )
-
+fun CategoryGridView(
+    modifier: Modifier = Modifier,
+    courseList: List<CategoryGridModel>,
+    selectedIndex: Int,
+    onClick: (Int) -> Unit
+) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(4),
         modifier = modifier
             .fillMaxWidth()
-            .background(Color.Transparent),
+            .height(220.dp)
+            .background(colorResource(R.color.color_transparent)),
         contentPadding = PaddingValues(3.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
+//        horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         items(courseList.size) { index ->
             val item = courseList[index]
-            val isSelected = index == selectedIndex.value
+            val isSelected = index == selectedIndex // Check if the current item is selected
 
             Column(
                 Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
                     .background(
-                        if (isSelected) Color.Gray else Color.Transparent,
+                        if (isSelected) colorResource(R.color.color_999797) else colorResource(R.color.color_transparent),
                         shape = RoundedCornerShape(8.dp) // Optional for rounded selection background
                     )
-                    .padding(3.dp)
+                    .padding(1.dp)
                     .clickable {
-                        // Update the selected index only if not already select
-                        if (selectedIndex.value != index) {
-                            selectedIndex.value = index
-                        }
+                        // Trigger the onClick callback with the selected index
+                        onClick(index)
                     },
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
@@ -345,17 +482,28 @@ fun CategoryGridView(modifier: Modifier = Modifier,selectedIndex: MutableState<I
                     painter = painterResource(id = item.img),
                     contentDescription = "categoryTypeImage123",
                     modifier = Modifier
-                        .height(40.dp)
-                        .width(40.dp),
-                    colorFilter = ColorFilter.tint(Color.White)
+                        .height(30.dp)
+                        .width(30.dp),
+                    colorFilter = ColorFilter.tint(colorResource(R.color.color_ffffff))
                 )
-                Spacer(modifier = Modifier.height(9.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = item.type,
                     fontWeight = FontWeight.Medium,
-                    color = Color.White
+                    color = colorResource(R.color.color_ffffff)
                 )
             }
         }
     }
 }
+@RequiresApi(Build.VERSION_CODES.O)
+fun convertSelectedDateToMillisInIST(selectedDate: LocalDate): Long {
+    val localDateTime = selectedDate.atStartOfDay()
+
+    // Convert LocalDateTime to ZonedDateTime in IST (Asia/Kolkata time zone)
+    val zonedDateTime = localDateTime.atZone(ZoneId.of("Asia/Kolkata"))
+
+    // Convert ZonedDateTime to milliseconds
+    return zonedDateTime.toInstant().toEpochMilli()
+}
+

@@ -3,6 +3,7 @@ package com.example.expensetracker.pages
 import android.app.Activity
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,6 +20,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,6 +53,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusModifier
 import androidx.compose.ui.graphics.BlendMode.Companion.Color
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -62,13 +68,15 @@ import androidx.navigation.NavController
 import com.example.expensetracker.AuthState
 import com.example.expensetracker.AuthViewModel
 import com.example.expensetracker.R
+import com.example.expensetracker.data.CategoryAggregate
+import com.example.expensetracker.data.ExpenseViewModel
 import com.google.accompanist.pager.ExperimentalPagerApi
 import kotlinx.coroutines.launch
 import kotlin.io.path.ExperimentalPathApi
 
 @OptIn(ExperimentalPagerApi::class)
 @Composable
-fun HomePage(modifier: Modifier=Modifier,navController: NavController,authViewModel: AuthViewModel){
+fun HomePage(modifier: Modifier=Modifier,navController: NavController,authViewModel: AuthViewModel,expenseViewModel: ExpenseViewModel){
     val context = LocalContext.current
     val authState = authViewModel.authState.observeAsState()
     var backPressedOnce by remember { mutableStateOf(false) }
@@ -97,21 +105,27 @@ fun HomePage(modifier: Modifier=Modifier,navController: NavController,authViewMo
         }
     }
 
-    ExpenseIncomeTabScreen(modifier,navController)
+    ExpenseIncomeTabScreen(modifier,navController,expenseViewModel)
 
 }
-
+val LazyListState.isScrolled:Boolean
+    get() = firstVisibleItemIndex >1 || firstVisibleItemScrollOffset>1
 
 @ExperimentalPagerApi
 @OptIn(ExperimentalUnitApi::class)
 @Composable
-fun ExpenseIncomeTabScreen(modifier: Modifier,navController: NavController) {
+fun ExpenseIncomeTabScreen(modifier: Modifier,navController: NavController,expenseViewModel: ExpenseViewModel) {
     val pagerState = rememberPagerState(pageCount = { 2 })
     val tabs = listOf("EXPENSES", "INCOME")
     val coroutineScope = rememberCoroutineScope()
-
-    // Observe pagerState and update selectedTabIndex
     var selectedTabIndex by remember { mutableStateOf(0) }
+    val type = if (selectedTabIndex == 0) "expense" else "income"
+    val incomeAmount = expenseViewModel.getTotalAmountForType("income")?.observeAsState(initial = 0)?.value
+    val expenseAmount = expenseViewModel.getTotalAmountForType("expense")?.observeAsState(initial = 0)?.value
+    val totalAmount = (incomeAmount ?:0)- (expenseAmount ?:0)
+    val totalSum = expenseViewModel.getTotalAmountForType(type)?.observeAsState(initial = 0) // Default value 0 if null
+    val groupedData by expenseViewModel.getSumGroupByCategory(type).observeAsState(emptyList())
+    val lazyListState = rememberLazyListState()
 
     LaunchedEffect(pagerState.currentPage) {
         selectedTabIndex = pagerState.currentPage
@@ -134,26 +148,27 @@ fun ExpenseIncomeTabScreen(modifier: Modifier,navController: NavController) {
                     Spacer(modifier = Modifier.height(20.dp))
                     Text(
                         text = "Total",
-                        fontSize = 14.sp,
-                        color = androidx.compose.ui.graphics.Color.White
-                    )
+                        fontSize = 18.sp,
+                        color = colorResource(R.color.color_ffffff),
+                        fontWeight = FontWeight.Bold,
+                        )
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
-                        painter = painterResource(id = R.drawable.houselogo), // Replace with actual icon
-                        contentDescription = "Dropdown",
-                        tint = androidx.compose.ui.graphics.Color.White,
-                        modifier = Modifier.size(16.dp)
+                        painter = painterResource(id = R.drawable.totalamount), // Replace with actual icon
+                        contentDescription = "totalAmtImg",
+                        tint = colorResource(R.color.color_ffffff),
+                        modifier = Modifier.size(20.dp)
                     )
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = "₹5,847",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = androidx.compose.ui.graphics.Color.White,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                        text = "${totalAmount}",
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if(totalAmount<0) colorResource(R.color.color_f7435e) else colorResource(R.color.color_ffffff),
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -167,11 +182,14 @@ fun ExpenseIncomeTabScreen(modifier: Modifier,navController: NavController) {
                                 .height(2.dp)
                                 .padding(horizontal = 48.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(color = androidx.compose.ui.graphics.Color.White, shape = RoundedCornerShape(8.dp))
+                                .background(
+                                    color = colorResource(R.color.color_ffffff),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
                         )
                     },
-                    contentColor = androidx.compose.ui.graphics.Color.Transparent,
-                    divider = {HorizontalDivider(color = androidx.compose.ui.graphics.Color.Transparent)},
+                    contentColor = colorResource(R.color.color_transparent),
+                    divider = {HorizontalDivider(color = colorResource(R.color.color_transparent))},
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(4.dp)
@@ -179,7 +197,7 @@ fun ExpenseIncomeTabScreen(modifier: Modifier,navController: NavController) {
                 ) {
                     tabs.forEachIndexed { index, title ->
                         Tab(
-                            unselectedContentColor = androidx.compose.ui.graphics.Color.Transparent,
+                            unselectedContentColor = colorResource(R.color.color_transparent),
                             selected = selectedTabIndex == index,
                             onClick = {
                                 selectedTabIndex = index
@@ -192,7 +210,7 @@ fun ExpenseIncomeTabScreen(modifier: Modifier,navController: NavController) {
                                 text = title,
                                 fontSize = 20.sp,
                                 fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal,
-                                color = androidx.compose.ui.graphics.Color.White
+                                color = colorResource(R.color.color_ffffff)
                             )
                         }
                     }
@@ -205,8 +223,8 @@ fun ExpenseIncomeTabScreen(modifier: Modifier,navController: NavController) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(330.dp)
-                .padding(horizontal = 28.dp)
+//                .height(330.dp)
+                .padding(horizontal = 20.dp)
                 .offset(y = (-30).dp)
                 .zIndex(1f)
                 .clip(RoundedCornerShape(20.dp))
@@ -215,12 +233,13 @@ fun ExpenseIncomeTabScreen(modifier: Modifier,navController: NavController) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .fillMaxHeight()
+//                    .fillMaxHeight()
                     .background(colorResource(R.color.color_454545)),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
                         .padding(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -229,7 +248,7 @@ fun ExpenseIncomeTabScreen(modifier: Modifier,navController: NavController) {
                         text = "<",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = androidx.compose.ui.graphics.Color.White,
+                        color = colorResource(R.color.color_ffffff),
                         modifier = Modifier.clickable { /* Handle left click */ }
                     )
 
@@ -240,7 +259,7 @@ fun ExpenseIncomeTabScreen(modifier: Modifier,navController: NavController) {
                             Text(
                                 text = period,
                                 fontSize = 14.sp,
-                                color = if (period == "Week") Color(0xFF00E676) else androidx.compose.ui.graphics.Color.White,
+                                color = if (period == "Week") Color(0xFF00E676) else colorResource(R.color.color_ffffff),
                                 modifier = Modifier.padding(horizontal = 4.dp)
                             )
                         }
@@ -250,7 +269,7 @@ fun ExpenseIncomeTabScreen(modifier: Modifier,navController: NavController) {
                         text = ">",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = androidx.compose.ui.graphics.Color.White,
+                        color = colorResource(R.color.color_ffffff),
                         modifier = Modifier.clickable { /* Handle right click */ }
                     )
                 }
@@ -260,47 +279,129 @@ fun ExpenseIncomeTabScreen(modifier: Modifier,navController: NavController) {
                 Text(
                     text = "Nov 3 – Nov 9",
                     fontSize = 16.sp,
-                    color = androidx.compose.ui.graphics.Color.White,
+                    color = colorResource(R.color.color_ffffff),
                     fontWeight = FontWeight.Bold
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-
-
-                PieChart(
-//                        data = null
-                    data = mapOf(
-                        Pair("Sample-1", 150),
-                        Pair("Sample-2", 120),
-                        Pair("Sample-3", 80),
-                        Pair("Sample-4", 50),
-                        Pair("Sample-5", 20)
+                if(lazyListState.isScrolled && groupedData.size>=5){
+                    androidx.compose.material.Text(
+                        text = "\u20B9${totalSum?.value}",  // Displaying total sum in INR
+                        fontSize = 28.sp,
+                        color = colorResource(R.color.color_ffffff),
+                        fontWeight = FontWeight.Bold
                     )
-                )
+                }else {
+                    PieChart(
+                        expenseViewModel = expenseViewModel,
+                        selectedTabIndex = selectedTabIndex
+                    )
+                }
 
-                Spacer(modifier = Modifier.height(16.dp))
 
                 FloatingActionButton(
                     onClick = {
                         navController.navigate("addscreen")
                     },
-                    contentColor = androidx.compose.ui.graphics.Color.Black,
-                    modifier = Modifier.size(40.dp)
-                        .padding(vertical = 2.dp),
-                    containerColor = colorResource(R.color.color_d6aa09)
+                    modifier = Modifier
+                        .size(70.dp)
+                        .padding(start = 0.dp, top = 0.dp, end = 20.dp, bottom = 20.dp)
+                        .align(Alignment.End),
+                    containerColor = colorResource(R.color.color_d6aa09),
+                    shape = CircleShape // Ensure circular shape
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = "Add",
-                        modifier = Modifier.size(24.dp),
-                        tint = androidx.compose.ui.graphics.Color.White
+                        modifier = Modifier.size(40.dp),
+                        tint = colorResource(R.color.color_454545)
                     )
                 }
+
+            }
+        }
+        LazyColumn(modifier= Modifier
+            .fillMaxWidth()
+            .padding(4.dp),
+            state =lazyListState) {
+            items(groupedData){item ->
+                ExpenseItem(totalSum?.value?:1,item)
             }
         }
     }
 }
 
+@Composable
+fun ExpenseItem(
+    totalSum: Int,
+    item: CategoryAggregate
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(4.dp)
+            .background(colorResource(R.color.color_454545), RoundedCornerShape(8.dp)),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        // Icon and Title Row
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 8.dp, top = 14.dp, bottom = 14.dp)
+        ) {
+            // Icon with background
+            Spacer(modifier = Modifier.width(14.dp))
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(35.dp)
+                    .background(colorResource(id = item.color), CircleShape)
+            ) {
+                Image(
+                    painter = painterResource(id = item.img),
+                    contentDescription = "categoryImg",
+                    modifier = Modifier.size(24.dp),
+                )
+            }
 
+            Spacer(modifier = Modifier.width(18.dp))
 
+            // Title
+            Text(
+                text = item.category,
+                color = colorResource(R.color.color_ffffff),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        // Percentage and Amount Row
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 0.dp,end = 16.dp, top = 14.dp, bottom = 14.dp),
+            horizontalArrangement = Arrangement.Start,
+
+        ) {
+            val percentage = if (totalSum != 0) (item.totalAmount * 100 / totalSum) else 0
+
+            Text(
+                text = "$percentage%", // Proper percentage calculation
+                color = colorResource(R.color.color_ffffff),
+                fontSize = 14.sp,
+                textAlign = TextAlign.Start
+            )
+
+            Spacer(modifier = Modifier.width(40.dp))
+
+            Text(
+                text = "\u20B9${item.totalAmount}", // Correct Unicode for Rupee
+                color = colorResource(R.color.color_ffffff),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Start
+            )
+            Spacer(modifier = Modifier.width(14.dp))
+        }
+    }
+}
