@@ -35,8 +35,8 @@ interface ExpenseTableDao {
      fun getExpensesBetweenDates(startDate: Long, endDate: Long): LiveData<List<ExpenseDataModel>>
 
     // Get total amount spent for a specific category
-    @Query("SELECT SUM(amount) FROM expense_table WHERE category = :category")
-     fun getTotalAmountForCategory(category: String): LiveData<Int>?
+    @Query("SELECT SUM(amount) FROM expense_table WHERE category = :category AND type = :type")
+     fun getTotalAmountForCategory(category: String,type: String): LiveData<Int>?
 
     @Query("SELECT SUM(amount) FROM expense_table WHERE type = :type")
      fun getTotalAmountForType(type: String): LiveData<Int>?
@@ -56,5 +56,6 @@ interface ExpenseTableDao {
     @Query(" SELECT type, SUM(amount) AS totalAmount, color, img FROM expense_table GROUP BY type")
     fun getSumGroupByType(): LiveData<List<TypeAggregate>>
 
-
+    @Query("SELECT * FROM expense_table WHERE category = :category AND type = :type")
+    fun getCategoryWiseData(category: String,type: String): LiveData<List<ExpenseDataModel>>?
 }

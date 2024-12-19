@@ -42,8 +42,8 @@ class ExpenseViewModel(private val repository: ExpenseDataRepo) : ViewModel() {
     }
 
     // Get total amount for a category
-    fun getTotalAmountForCategory(category: String): LiveData<Int>? {
-        return repository.getTotalAmountForCategory(category)
+    fun getTotalAmountForCategory(category: String,type: String): LiveData<Int>? {
+        return repository.getTotalAmountForCategory(category,type)
     }
 
     // Get total amount for a type
@@ -61,6 +61,9 @@ class ExpenseViewModel(private val repository: ExpenseDataRepo) : ViewModel() {
     }
     fun getSumGroupByType():LiveData<List<TypeAggregate>>{
         return repository.getSumGroupByType()
+    }
+    fun getCategoryWiseData(category: String,type: String):LiveData<List<ExpenseDataModel>>?{
+        return repository.getCategoryWiseData(category,type)
     }
 }
 

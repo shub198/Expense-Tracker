@@ -90,6 +90,7 @@ import androidx.navigation.NavController
 import com.example.expensetracker.AuthState
 import com.example.expensetracker.AuthViewModel
 import com.example.expensetracker.R
+import com.example.expensetracker.Utils
 import com.example.expensetracker.data.CategoryGridModel
 import com.example.expensetracker.data.ExpenseDataModel
 import com.example.expensetracker.data.ExpenseViewModel
@@ -163,16 +164,16 @@ fun AddExpenseIncomeView(modifier: Modifier = Modifier, navController: NavContro
 
     val context = LocalContext.current
     val courseList = listOf(
-        CategoryGridModel(R.drawable._pngtree_medical_health_logo_4135842, "Health", R.color.color_e64747),
-        CategoryGridModel(R.drawable.houselogo, "House", R.color.color_f5a662),
-        CategoryGridModel(R.drawable.foodlogo, "Food", R.color.color_cf9dca),
-        CategoryGridModel(R.drawable.educationlogo, "Education", R.color.color_5b92c2),
-        CategoryGridModel(R.drawable.giftlogo, "Gift", R.color.color_e677bf),
-        CategoryGridModel(R.drawable.grocerieslogo, "Groceries", R.color.color_4db36a),
-        CategoryGridModel(R.drawable.family1, "Family", R.color.color_ecf545),
-        CategoryGridModel(R.drawable.gym, "Workout", R.color.color_fab669),
-        CategoryGridModel(R.drawable.buslogo1, "Transport", R.color.color_2c8ae8),
-        CategoryGridModel(R.drawable.other, "Other", R.color.color_86888a)
+        CategoryGridModel(R.drawable._pngtree_medical_health_logo_4135842, Utils.HEALTH_STRING, Utils.HEALTH_COLOR),
+        CategoryGridModel(R.drawable.houselogo, Utils.HOME_STRING, Utils.HOME_COLOR),
+        CategoryGridModel(R.drawable.foodlogo, Utils.CAFE_STRING, Utils.CAFE_COLOR),
+        CategoryGridModel(R.drawable.educationlogo, Utils.EDUCATION_STRING, Utils.EDUCATION_COLOR),
+        CategoryGridModel(R.drawable.giftlogo, Utils.GIFTS_STRING, Utils.GIFTS_COLOR),
+        CategoryGridModel(R.drawable.grocerieslogo, Utils.GROCERIES_STRING,Utils.GROCERIES_COLOR),
+        CategoryGridModel(R.drawable.family1, Utils.FAMILY_STRING, Utils.FAMILY_COLOR),
+        CategoryGridModel(R.drawable.gym, Utils.WORKOUT_STRING, Utils.WORKOUT_COLOR),
+        CategoryGridModel(R.drawable.buslogo1, Utils.TRANSPORTATION_STRING,Utils.TRANSPORTATION_COLOR),
+        CategoryGridModel(R.drawable.other, Utils.OTHER_STRING,Utils.OTHER_COLOR)
     )
 
     LaunchedEffect(pagerState.currentPage) {
@@ -422,7 +423,7 @@ fun AddExpenseIncomeView(modifier: Modifier = Modifier, navController: NavContro
         ) {
             Button(
                 onClick = {
-                    val type = if (selectedTabIndex == 0) "expense" else "income"
+                    val type = if (selectedTabIndex == 0) Utils.EXPENSE_TYPE_STRING else Utils.INCOME_TYPE_STRING
                     expenseViewModel.insertExpense(ExpenseDataModel(type = type, category = courseList[selectedIndex.value].type, noteString = comment, color = courseList[selectedIndex.value].color, date = convertSelectedDateToMillisInIST(selectedDate), amount = amount.toInt(), img = courseList[selectedIndex.value].img))
                     navController.navigate("home")
                 },

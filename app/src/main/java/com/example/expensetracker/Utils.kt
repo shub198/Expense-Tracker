@@ -7,9 +7,9 @@ import androidx.core.content.ContextCompat
 
 object Utils {
     const val EXPENSE_STRING = "Expense"
-    const val EXPENSE_TYPE_STRING = "expenseType"
+    const val EXPENSE_TYPE_STRING = "expense"
     const val INCOME_STRING = "Income"
-    const val INCOME_TYPE_STRING = "incomeType"
+    const val INCOME_TYPE_STRING = "income"
     val HEALTH_COLOR = R.color.color_e64747
     val HOME_COLOR = R.color.color_fab669
     val CAFE_COLOR = R.color.color_cf9dca
@@ -22,6 +22,17 @@ object Utils {
     val OTHER_COLOR = R.color.color_e64747
     val INCOME_COLOR = R.color.color_86888a
     val INTEREST_COLOR = R.color.color_4db36a
+
+    val HEALTH_STRING = "Health"
+    val HOME_STRING = "House"
+    val CAFE_STRING = "Food"
+    val EDUCATION_STRING = "Education"
+    val GIFTS_STRING = "Gift"
+    val GROCERIES_STRING = "Groceries"
+    val FAMILY_STRING = "Family"
+    val WORKOUT_STRING = "Workout"
+    val TRANSPORTATION_STRING = "Transport"
+    val OTHER_STRING = "Other"
 
 
     fun showToast(context: Context, message: String) {

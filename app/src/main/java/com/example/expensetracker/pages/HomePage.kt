@@ -3,6 +3,12 @@ package com.example.expensetracker.pages
 import android.app.Activity
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -51,7 +57,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusModifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode.Companion.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
@@ -68,6 +76,7 @@ import androidx.navigation.NavController
 import com.example.expensetracker.AuthState
 import com.example.expensetracker.AuthViewModel
 import com.example.expensetracker.R
+import com.example.expensetracker.Utils
 import com.example.expensetracker.data.CategoryAggregate
 import com.example.expensetracker.data.ExpenseViewModel
 import com.google.accompanist.pager.ExperimentalPagerApi
@@ -119,7 +128,7 @@ fun ExpenseIncomeTabScreen(modifier: Modifier,navController: NavController,expen
     val tabs = listOf("EXPENSES", "INCOME")
     val coroutineScope = rememberCoroutineScope()
     var selectedTabIndex by remember { mutableStateOf(0) }
-    val type = if (selectedTabIndex == 0) "expense" else "income"
+    val type = if (selectedTabIndex == 0) Utils.EXPENSE_TYPE_STRING else Utils.INCOME_TYPE_STRING
     val incomeAmount = expenseViewModel.getTotalAmountForType("income")?.observeAsState(initial = 0)?.value
     val expenseAmount = expenseViewModel.getTotalAmountForType("expense")?.observeAsState(initial = 0)?.value
     val totalAmount = (incomeAmount ?:0)- (expenseAmount ?:0)
@@ -130,6 +139,30 @@ fun ExpenseIncomeTabScreen(modifier: Modifier,navController: NavController,expen
     LaunchedEffect(pagerState.currentPage) {
         selectedTabIndex = pagerState.currentPage
     }
+
+    val shimmerColors = listOf(
+        colorResource(R.color.color_transparent),
+        colorResource(R.color.color_ffffff).copy(alpha = 0.4f),
+        colorResource(R.color.color_transparent)
+    )
+
+
+    val transition = rememberInfiniteTransition()
+    val translateX by transition.animateFloat(
+        initialValue = -200f,
+        targetValue = 200f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        )
+    )
+
+
+    val shimmerBrush = Brush.linearGradient(
+        colors = shimmerColors,
+        start = Offset(translateX, 0f),
+        end = Offset(translateX + 300f, 0f)
+    )
 
     Column(
         modifier = Modifier
@@ -286,7 +319,7 @@ fun ExpenseIncomeTabScreen(modifier: Modifier,navController: NavController,expen
                 Spacer(modifier = Modifier.height(16.dp))
 
                 if(lazyListState.isScrolled && groupedData.size>=5){
-                    androidx.compose.material.Text(
+                    Text(
                         text = "\u20B9${totalSum?.value}",  // Displaying total sum in INR
                         fontSize = 28.sp,
                         color = colorResource(R.color.color_ffffff),
@@ -299,23 +332,34 @@ fun ExpenseIncomeTabScreen(modifier: Modifier,navController: NavController,expen
                     )
                 }
 
-
-                FloatingActionButton(
-                    onClick = {
-                        navController.navigate("addscreen")
-                    },
+                Box(
                     modifier = Modifier
                         .size(70.dp)
+                        .align(Alignment.End)
                         .padding(start = 0.dp, top = 0.dp, end = 20.dp, bottom = 20.dp)
-                        .align(Alignment.End),
-                    containerColor = colorResource(R.color.color_d6aa09),
-                    shape = CircleShape // Ensure circular shape
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Add",
-                        modifier = Modifier.size(40.dp),
-                        tint = colorResource(R.color.color_454545)
+                    FloatingActionButton(
+                        onClick = { navController.navigate("addscreen") },
+                        modifier = Modifier
+                            .size(70.dp)
+                            .align(Alignment.Center),
+                        containerColor = colorResource(R.color.color_d6aa09),
+                        shape = CircleShape
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add",
+                            modifier = Modifier.size(40.dp),
+                            tint = colorResource(R.color.color_454545)
+                        )
+                    }
+
+                    // Apply the shimmer overlay
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize() // Matches the FAB size
+                            .clip(CircleShape) // Ensures it matches the circular shape of the FAB
+                            .background(shimmerBrush)
                     )
                 }
 
@@ -326,7 +370,12 @@ fun ExpenseIncomeTabScreen(modifier: Modifier,navController: NavController,expen
             .padding(4.dp),
             state =lazyListState) {
             items(groupedData){item ->
-                ExpenseItem(totalSum?.value?:1,item)
+                ExpenseItem(totalSum?.value?:1,
+                    item,
+                    {category ->
+                        navController.navigate("categoryDescriptionPage/${category}/${type}")
+                    }
+                )
             }
         }
     }
@@ -335,13 +384,17 @@ fun ExpenseIncomeTabScreen(modifier: Modifier,navController: NavController,expen
 @Composable
 fun ExpenseItem(
     totalSum: Int,
-    item: CategoryAggregate
+    item: CategoryAggregate,
+    onClick: (String) -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(4.dp)
-            .background(colorResource(R.color.color_454545), RoundedCornerShape(8.dp)),
+            .background(colorResource(R.color.color_454545), RoundedCornerShape(8.dp))
+            .clickable {
+                onClick(item.category)
+            },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {

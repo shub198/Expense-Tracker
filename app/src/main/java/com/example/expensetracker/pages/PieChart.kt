@@ -2,6 +2,7 @@ package com.example.expensetracker.pages
 
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -24,6 +25,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.expensetracker.R
+import com.example.expensetracker.Utils
 import com.example.expensetracker.data.ExpenseViewModel
 import com.example.expensetracker.data.PieChartDatamodel
 import com.example.expensetracker.ui.theme.Purple40
@@ -35,7 +37,7 @@ import com.example.expensetracker.ui.theme.Purple80
 fun PieChart(
     radiusOuter: Dp = 85.dp,
     chartBarWidth: Dp = 25.dp,
-    animDuration: Int = 8000,
+    animDuration: Int = 1000,
     expenseViewModel: ExpenseViewModel,
     selectedTabIndex:Int
 ) {
@@ -52,25 +54,25 @@ fun PieChart(
             groupedData.forEachIndexed { index, value ->
                 val percentage = (360f * value.totalAmount.toFloat()) / totalSum?.value?.toFloat()!!
 
-                if(value.category=="Health") {
+                if(value.category==Utils.HEALTH_STRING) {
                     floatValue.add(PieChartDatamodel(percentage,Color(0xFFE64747)))
-                }else if(value.category=="House"){
+                }else if(value.category==Utils.HOME_STRING){
                     floatValue.add(PieChartDatamodel(percentage,Color(0xFFF5A662)))
-                }else if (value.category=="Food"){
+                }else if (value.category==Utils.CAFE_STRING){
                     floatValue.add(PieChartDatamodel(percentage,Color(0xFFCF9DCA)))
-                }else if(value.category=="Education"){
+                }else if(value.category==Utils.EDUCATION_STRING){
                     floatValue.add(PieChartDatamodel(percentage,Color(0xFF5B92C2)))
-                }else if (value.category=="Gift"){
+                }else if (value.category==Utils.GIFTS_STRING){
                     floatValue.add(PieChartDatamodel(percentage,Color(0xFFE677BF)))
-                }else if(value.category=="Groceries"){
+                }else if(value.category==Utils.GROCERIES_STRING){
                     floatValue.add(PieChartDatamodel(percentage,Color(0xFF4DB36A)))
-                }else if (value.category=="Family"){
+                }else if (value.category==Utils.FAMILY_STRING){
                     floatValue.add(PieChartDatamodel(percentage,Color(0xFFECF545)))
-                }else if(value.category=="Workout"){
+                }else if(value.category==Utils.WORKOUT_STRING){
                     floatValue.add(PieChartDatamodel(percentage,Color(0xFFFAB669)))
-                }else if (value.category=="Transport"){
+                }else if (value.category==Utils.TRANSPORTATION_STRING){
                     floatValue.add(PieChartDatamodel(percentage,Color(0xFF2C8AE8)))
-                }else if(value.category=="Other"){
+                }else if(value.category==Utils.OTHER_STRING){
                     floatValue.add(PieChartDatamodel(percentage,Color(0xFF86888A)))
                 }
             }
@@ -78,15 +80,12 @@ fun PieChart(
     }
 
     var animationPlayed by remember { mutableStateOf(false) }
-    var lastValue = 0f
 
-    // Animated size of the chart
     val animateSize by animateFloatAsState(
         targetValue = if (animationPlayed) radiusOuter.value * 2f else 0f,
-        animationSpec = tween(
-            durationMillis = animDuration,
-            delayMillis = 0,
-            easing = LinearOutSlowInEasing
+        animationSpec =  spring(
+            dampingRatio = 0.5f,
+            stiffness = 50f
         )
     )
 

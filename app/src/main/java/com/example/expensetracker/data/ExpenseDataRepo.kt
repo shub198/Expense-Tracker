@@ -34,8 +34,8 @@ class ExpenseDataRepo(private val expenseTableDao: ExpenseTableDao) {
     }
 
     // Get total amount spent for a specific category
-    fun getTotalAmountForCategory(category: String): LiveData<Int>? {
-        return expenseTableDao.getTotalAmountForCategory(category)
+    fun getTotalAmountForCategory(category: String,type: String): LiveData<Int>? {
+        return expenseTableDao.getTotalAmountForCategory(category,type)
     }
 
     // Get total amount spent for a specific type
@@ -52,5 +52,8 @@ class ExpenseDataRepo(private val expenseTableDao: ExpenseTableDao) {
     }
     fun getSumGroupByType():LiveData<List<TypeAggregate>>{
         return expenseTableDao.getSumGroupByType()
+    }
+    fun getCategoryWiseData(category: String,type: String):LiveData<List<ExpenseDataModel>>?{
+        return expenseTableDao.getCategoryWiseData(category,type)
     }
 }
