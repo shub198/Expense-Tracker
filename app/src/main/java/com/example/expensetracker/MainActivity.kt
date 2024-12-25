@@ -17,15 +17,31 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.ViewModelProvider
+import com.example.expensetracker.data.ExpenseDataBase
+import com.example.expensetracker.data.ExpenseDataRepo
+import com.example.expensetracker.data.ExpenseViewModel
+import com.example.expensetracker.data.ExpenseViewModelFactory
 import com.example.expensetracker.ui.theme.ExpenseTrackerTheme
 
 class MainActivity : ComponentActivity() {
+    private val database by lazy { ExpenseDataBase.getDatabase(applicationContext) }
+    private lateinit var expenseViewModel: ExpenseViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setupEdgeToEdgeMode()
-        setupStatusBarAppearance()
+
+        // Defer status bar appearance setup
+        window.decorView.post {
+            setupStatusBarAppearance()
+        }
+
+        // Initialize ViewModel
+        val repository = ExpenseDataRepo(database.expenseDao())
+        val factory = ExpenseViewModelFactory(repository)
+        expenseViewModel = ViewModelProvider(this, factory)[ExpenseViewModel::class.java]
 
         setContent {
             val authViewModel: AuthViewModel by viewModels()
@@ -33,41 +49,33 @@ class MainActivity : ComponentActivity() {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     MyAppNavigation(
                         modifier = Modifier.padding(innerPadding),
-                        authViewModel = authViewModel
+                        authViewModel = authViewModel,
+                        expenseViewModel = expenseViewModel
                     )
                 }
             }
         }
     }
 
-
     private fun setupEdgeToEdgeMode() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
     }
 
-
     @SuppressLint("ResourceAsColor")
     private fun setupStatusBarAppearance() {
-        // Set status bar color to dark green
-        window.statusBarColor = ContextCompat.getColor(this,R.color.app_theme_color)
-
-        // Adjust status bar icon/text color based on background color (light icons on dark background)
-        window.decorView.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
-            override fun onGlobalLayout() {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    window.insetsController?.setSystemBarsAppearance(
-                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS.inv(),
-                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
-                    )
-                } else {
-                    @Suppress("DEPRECATION")
-                    window.decorView.systemUiVisibility =
-                        window.decorView.systemUiVisibility and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
-                }
-                // Remove the listener after setup to avoid repeated calls
-                window.decorView.viewTreeObserver.removeOnGlobalLayoutListener(this)
+        val decorView = window.decorView
+        if (decorView != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val insetsController = window.insetsController
+                insetsController?.setSystemBarsAppearance(
+                    WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS.inv(),
+                    WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                decorView.systemUiVisibility =
+                    decorView.systemUiVisibility and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
             }
-        })
+        }
     }
 }
-

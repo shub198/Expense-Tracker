@@ -1,5 +1,6 @@
 package com.example.expensetracker.data
 
+import androidx.lifecycle.LiveData
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
@@ -23,24 +24,38 @@ interface ExpenseTableDao {
 
     // Retrieve all expenses, ordered by date in descending order
     @Query("SELECT * FROM expense_table ORDER BY date DESC")
-    suspend fun getAllExpenses(): List<ExpenseDataModel>
+     fun getAllExpenses(): LiveData<List<ExpenseDataModel>>
 
     // Retrieve a single expense by its ID
     @Query("SELECT * FROM expense_table WHERE id = :expenseId")
-    suspend fun getExpenseById(expenseId: Int): ExpenseDataModel?
+     fun getExpenseById(expenseId: Int): LiveData<ExpenseDataModel>?
 
     // Get expenses within a certain date range (useful for reports)
     @Query("SELECT * FROM expense_table WHERE date BETWEEN :startDate AND :endDate ORDER BY date DESC")
-    suspend fun getExpensesBetweenDates(startDate: Long, endDate: Long): List<ExpenseDataModel>
+     fun getExpensesBetweenDates(startDate: Long, endDate: Long): LiveData<List<ExpenseDataModel>>
 
     // Get total amount spent for a specific category
-    @Query("SELECT SUM(amount) FROM expense_table WHERE category = :category")
-    suspend fun getTotalAmountForCategory(category: String): Int?
+    @Query("SELECT SUM(amount) FROM expense_table WHERE category = :category AND type = :type")
+     fun getTotalAmountForCategory(category: String,type: String): LiveData<Int>?
 
     @Query("SELECT SUM(amount) FROM expense_table WHERE type = :type")
-    suspend fun getTotalAmountForType(type: String): Int?
+     fun getTotalAmountForType(type: String): LiveData<Int>?
 
     // Get total amount spent
     @Query("SELECT SUM(amount) FROM expense_table")
-    suspend fun getTotalAmountSpent(): Int?
+     fun getTotalAmountSpent(): LiveData<Int>?
+
+    @Query("""
+    SELECT category, SUM(amount) AS totalAmount, color, img 
+    FROM expense_table 
+    WHERE type = :type
+    GROUP BY category
+""")
+    fun getSumGroupByCategory(type: String): LiveData<List<CategoryAggregate>>
+
+    @Query(" SELECT type, SUM(amount) AS totalAmount, color, img FROM expense_table GROUP BY type")
+    fun getSumGroupByType(): LiveData<List<TypeAggregate>>
+
+    @Query("SELECT * FROM expense_table WHERE category = :category AND type = :type")
+    fun getCategoryWiseData(category: String,type: String): LiveData<List<ExpenseDataModel>>?
 }
