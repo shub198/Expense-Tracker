@@ -318,7 +318,7 @@ fun ExpenseIncomeTabScreen(modifier: Modifier,navController: NavController,expen
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                if(lazyListState.isScrolled && groupedData.size>=5){
+                if(lazyListState.isScrolled && groupedData.size>=7){
                     Text(
                         text = "\u20B9${totalSum?.value}",  // Displaying total sum in INR
                         fontSize = 28.sp,
@@ -412,7 +412,7 @@ fun ExpenseItem(
                     .background(colorResource(id = item.color), CircleShape)
             ) {
                 Image(
-                    painter = painterResource(id = item.img),
+                    painter = painterResource(id = R.drawable.houselogo),
                     contentDescription = "categoryImg",
                     modifier = Modifier.size(24.dp),
                 )
